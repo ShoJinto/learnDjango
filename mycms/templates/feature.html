@@ -1,0 +1,43 @@
+<hr class="featurette-divider">
+
+<div class="row featurette">
+  <div class="col-md-7">
+  {% for i in feature1 %}
+    <h2 class="featurette-heading">{{ i.feature_heading }}<span class="text-muted">{{ i.feature_muted }}</span></h2>
+    <p class="lead">{{ i.feature_lead }}</p>
+  {% endfor %}
+  </div>
+  <div class="col-md-5">
+    <img class="featurette-image img-responsive center-block" data-src="holder.js/500x500/auto" alt="Generic placeholder image">
+  </div>
+</div>
+
+<hr class="featurette-divider">
+
+<div class="row featurette">
+  <div class="col-md-7 col-md-push-5">
+  {% for i in feature2 %}
+    <h2 class="featurette-heading">{{ i.feature_hedading }}<span class="text-muted">{{ i.feature_muted }}</span></h2>
+    <p class="lead">{{ i.feature_lead }}</p>
+  {% endfor %}
+  </div>
+  <div class="col-md-5 col-md-pull-7">
+    <img class="featurette-image img-responsive center-block" data-src="holder.js/500x500/auto" alt="Generic placeholder image">
+  </div>
+</div>
+
+<hr class="featurette-divider">
+
+<div class="row featurette">
+  <div class="col-md-7">
+  {% for i in feature3 %}
+    <h2 class="featurette-heading">{{ i.feature_heading }}<span class="text-muted">{{ i.feature_muted }}</span></h2>
+    <p class="lead">{{ i.feature_lead }}</p>
+  {% endfor %}
+  </div>
+  <div class="col-md-5">
+    <img class="featurette-image img-responsive center-block" data-src="holder.js/500x500/auto" alt="Generic placeholder image">
+  </div>
+</div>
+
+<hr class="featurette-divider">
