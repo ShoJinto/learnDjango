@@ -94,7 +94,6 @@ def errorHandling(statation,url,err):
         redisClient(config.redis_host, config.redis_port).set(statation, int(er_count)+1,ex=ttl)
     
     if er_count >= config.count:
-        print "e_count: %s" % er_count
         reporter("[%s]:%s" % (statation,url), "check api", str(err))
         redisClient(config.redis_host, config.redis_port).delete(statation) #达到报警条件，发送完报警之后，需要对redis中的信息进行重置
 
