@@ -87,12 +87,14 @@ def errorHandling(statation,url,err):
     #如果该站点是第一次被检测出有问题，说明redis中根本就没有该站点的任何信息，这个if not ... else 是对错误次数进行初始化
     if not redisClient(config.redis_host, config.redis_port).get(statation):
         er_count=0
+        redisClient(config.redis_host, config.redis_port).set(statation, int(er_count)+1, ex=config.interval)
     else:
-        er_count=redisClient(config.redis_host, config.redis_port).get(statation)   
-                 
-    redisClient(config.redis_host, config.redis_port).set(statation, int(er_count)+1, ex=config.interval)
+        er_count=int(redisClient(config.redis_host, config.redis_port).get(statation)) #由于从redis中get到的value是str类型所以需要进行数据类型转换
+        ttl=redisClient(config.redis_host, config.redis_port).ttl(statation) #获取redis中问题站点错误次数过期时间，用于刷新超时时间
+        redisClient(config.redis_host, config.redis_port).set(statation, int(er_count)+1,ex=ttl)
     
-    if er_count>=config.count:
+    if er_count >= config.count:
+        print "e_count: %s" % er_count
         reporter("[%s]:%s" % (statation,url), "check api", str(err))
         redisClient(config.redis_host, config.redis_port).delete(statation) #达到报警条件，发送完报警之后，需要对redis中的信息进行重置
 
