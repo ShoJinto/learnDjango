@@ -2,23 +2,22 @@
 #
 #
 #	by jtxiao
+
 MOTD=mmchuxing.com
-WORKSPACE=$4
 OS_PLATFORM=`uname -i`
-V_USER=$2
-V_U_PWD=$3
-USER=$1
-SSL=$5
+
 # platform=64bit
 platform64(){
     echo 'auth required /lib64/security/pam_userdb.so db=/etc/vsftpd/vsftpd_login'  > /etc/pam.d/vsftpd.vu
     echo 'account required /lib64/security/pam_userdb.so db=/etc/vsftpd/vsftpd_login' >> /etc/pam.d/vsftpd.vu
 }
+
 # platform=32bit
 platform32(){
     echo 'auth required /lib/security/pam_userdb.so db=/etc/vsftpd/vsftpd_login'  > /etc/pam.d/vsftpd.vu
     echo 'account required /lib/security/pam_userdb.so db=/etc/vsftpd/vsftpd_login' >> /etc/pam.d/vsftpd.vu
 }
+
 main_config(){
 cat > /etc/vsftpd/vsftpd.conf <<EOF
 anonymous_enable=NO
@@ -84,18 +83,28 @@ anon_mkdir_write_enable=YES
 anon_other_write_enable=YES
 local_umask=022
 download_enable=Yes
-guest_username=$USER
-local_root=$WORKSPACE
+guest_username=$1
+local_root=$2
 EOF
 }
 usage(){
     echo ""
     echo "usage: $0 <ftp user> <virtual username> <password> <workspace directory> [ssl|motd]"
+    echo ""
+    echo ""
+    echo ""
+    echo ""
+    echo "-------------"
 }
 main(){
     if [ $# -ne 0 ]; then
         usage
     else
+	read -p 'Input ftp home directory path:' WORKSPACE
+	read -p 'Input virtual user:' V_USER
+	read -p 'Input virtual user password:' V_U_PWD
+	read -p 'Input guest user name:' USER
+	read -p 'Input SSL to support ssl:' SSL
 	# install ftp software
 	yum install -y vsftpd db4-utils |tee  >> vsftpd-install.log
 	# configruetion virtual user
@@ -114,7 +123,7 @@ main(){
 	if [ -n "$SSL"  ];then
 	    suport_ssl
 	fi
-	vu_config
+	vu_config $USER $WORKSPACE
     fi
 }
 main
