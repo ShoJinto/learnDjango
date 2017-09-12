@@ -98,7 +98,8 @@ def errorHandling(station,url,err):
     if er_count >= config.count:
         reporter("[%s]:%s" % (station,url), "check api", str(err))
         redisClient().delete(station) #达到报警条件，发送完报警之后，需要对redis中的信息进行重置
-        redisClient().rpush("retrystation_list",station)
+#         redisClient().rpush("retrystation_list",station)
+        redisClient().hset("retrystation_list", station, url) #将需要重新检测的车站信息放入redis中
         
 
 def checking(station,url,isretry=False):
@@ -114,7 +115,7 @@ def checking(station,url,isretry=False):
         response_code[url]=response.getcode()
         if isretry :
             reporter("[%s]:%s" % (station,url), "check api", "is recovered!")
-            redisClient().lrem("retrystation_list", station, num=0)
+            redisClient().hdel("retrystation_list", station) #重新检测发现没有问题的车站将从redis移除
         else:
             logging.info("[%s]:%s is ok!" % (station,url))
     except HTTPError as err:
@@ -132,14 +133,17 @@ def check_api():
         station=config.station_name  
         for url in config.urls:
             checking(station,url)
-            if redisClient().llen("retrystation_list") > 0:
-                checking(station, url, isretry=True)
+            
+        if redisClient().hlen("retrystation_list") > 0:
+            for re_station, re_url in redisClient().hgetall("retrystation_list").items():
+                checking(re_station, re_url, isretry=True)
     else:
         for station, url in config.stationUrlMapping.items():
             checking(station,url)
-            if redisClient().llen("retrystation_list") > 0:
-                checking(station, url, isretry=True)
-                redisClient().lrem("retrystation_list", station, num=0)
+            
+        if redisClient().hlen("retrystation_list") > 0:
+            for re_station, re_url in redisClient().hgetall("retrystation_list").items():
+                checking(re_station, re_url, isretry=True)
 
 if __name__=="__main__":
     check_api()
