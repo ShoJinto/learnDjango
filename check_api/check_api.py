@@ -4,6 +4,8 @@
 import urllib2 
 from urllib2 import HTTPError,URLError
 
+import time
+
 # from urllib2 import request
 # from urllib.error import HTTPError,URLError
 
@@ -20,7 +22,7 @@ from redis.exceptions import RedisError
 import config
 
 
-def redisClient(host,port):
+def redisClient(host=config.redis_host, port=config.redis_port):
     '''
     redis object 返回redis实例
     host    :redis server host
@@ -73,61 +75,71 @@ def sendemail(submsg,frommsg,msg):
 def reporter(sta_info,report,msg):
     '''
     this is a sendmail call function
-    sta_info    statation information
+    sta_info    station information
     report      senduser
     msg         error message
     '''
     logging.error(sta_info+": "+msg)
-    sendemail(sta_info,report,sta_info+": "+msg)
+    sendemail(sta_info,report,sta_info+": "+msg+"\nat: "+time.strftime("%Y-%m-%d %H:%M:%S")) # add timestemp
     
-def errorHandling(statation,url,err):
+def errorHandling(station,url,err):
     '''
     将经过检查有误的站点和错误次数作为reids的key和value进行存放，并设置key的超时时间。这样就达到了在规定时间内如果错误次数超过规定次数就进行报警的目的
     '''
     #如果该站点是第一次被检测出有问题，说明redis中根本就没有该站点的任何信息，这个if not ... else 是对错误次数进行初始化
-    if not redisClient(config.redis_host, config.redis_port).get(statation):
+    if not redisClient().get(station):
         er_count=0
-        redisClient(config.redis_host, config.redis_port).set(statation, int(er_count)+1, ex=config.interval)
+        redisClient(config.redis_host, config.redis_port).set(station, int(er_count)+1, ex=config.interval)
     else:
-        er_count=int(redisClient(config.redis_host, config.redis_port).get(statation)) #由于从redis中get到的value是str类型所以需要进行数据类型转换
-        ttl=redisClient(config.redis_host, config.redis_port).ttl(statation) #获取redis中问题站点错误次数过期时间，用于刷新超时时间
-        redisClient(config.redis_host, config.redis_port).set(statation, int(er_count)+1,ex=ttl)
+        er_count=int(redisClient().get(station)) #由于从redis中get到的value是str类型所以需要进行数据类型转换
+        ttl=redisClient(config.redis_host, config.redis_port).ttl(station) #获取redis中问题站点错误次数过期时间，用于刷新超时时间
+        redisClient().set(station, int(er_count)+1,ex=ttl)
     
     if er_count >= config.count:
-        reporter("[%s]:%s" % (statation,url), "check api", str(err))
-        redisClient(config.redis_host, config.redis_port).delete(statation) #达到报警条件，发送完报警之后，需要对redis中的信息进行重置
+        reporter("[%s]:%s" % (station,url), "check api", str(err))
+        redisClient().delete(station) #达到报警条件，发送完报警之后，需要对redis中的信息进行重置
+        redisClient().rpush("retrystation_list",station)
+        
 
-def checking(statation,url):
+def checking(station,url,isretry=False):
     '''
     this is checking function
     need two parameters
-    statation:    is statation name
-    url:          is statation threeparty api url
+    station:    is station name
+    url:          is station threeparty api url
     '''
     response_code=dict()
     try:
         response=urllib2.urlopen(url)
         response_code[url]=response.getcode()
-        logging.info("[%s]:%s is ok!" % (statation,url))
+        if isretry :
+            reporter("[%s]:%s" % (station,url), "check api", "is recovered!")
+            redisClient().lrem("retrystation_list", station, num=0)
+        else:
+            logging.info("[%s]:%s is ok!" % (station,url))
     except HTTPError as err:
-        errorHandling(statation, url, err)
+        errorHandling(station, url, err)
     except URLError as err:
-        errorHandling(statation, url, err)
+        errorHandling(station, url, err)
     except Exception as err:
-        errorHandling(statation, url, err)
+        errorHandling(station, url, err)
         
 def check_api():
     '''
     this is check api heath function
-    '''  
-    statation=config.statation_name  
-    if config.useUrls == True: 
+    '''   
+    if config.useUrls == True:
+        station=config.station_name  
         for url in config.urls:
-            checking(statation,url)
+            checking(station,url)
+            if redisClient().llen("retrystation_list") > 0:
+                checking(station, url, isretry=True)
     else:
-        for statation, url in config.statationUrlMapping.items():
-            checking(statation,url)
-
+        for station, url in config.stationUrlMapping.items():
+            checking(station,url)
+            if redisClient().llen("retrystation_list") > 0:
+                checking(station, url, isretry=True)
+                redisClient().lrem("retrystation_list", station, num=0)
 
 if __name__=="__main__":
     check_api()

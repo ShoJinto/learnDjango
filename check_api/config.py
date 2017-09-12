@@ -28,7 +28,7 @@ statationUrlMapping={
 
 #需要检查的url
 # url="http://ms.mmchuxing.com/test/conn"
-urls=["http://ms.mmchuxing.com/test/connssss"]
+urls=["http://ms.mmchuxing.com/test/connssss",]
 
 #redis配置，
 redis_host="localhost"
