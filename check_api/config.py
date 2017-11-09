@@ -6,7 +6,7 @@
 useUrls = False
 
 # 默认站点名称
-statation_name = "美美出行"
+station_name = "美美出行"
 
 # api接口url对应的车站
 statationUrlMapping = {
@@ -46,7 +46,7 @@ mail_pass = "XULEI520xulei"
 
 # 发送邮件帐号设置
 sender = "itservice@mmyueche.com"
-receivers = ["shojinto@mmchuxing.com"]
+receivers = ["shojinto@mmyueche.com"]
 
 # log保存路径记得最后的斜杠！！
 logpath = "/var/log/"
