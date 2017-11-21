@@ -26,6 +26,13 @@ pdfkit_options = {
     'margin-bottom': '0.75in',
     'margin-left': '0.75in',
     'encoding': "UTF-8",
+    'header-line': '',
+    'hedaer-font-size': 6,
+    'header-right': "作者：廖雪峰",
+    'footer-line': '',
+    'footer-font-size': 6,
+    'footer-right': "PDF制作：JTXIAO",
+    'footer-center': "[page]/[topage]",
     'custom-header': [
         ('Accept-Encoding', 'gzip')
     ],
