@@ -32,7 +32,7 @@ pdfkit_options = {
     'footer-line': '',
     'footer-font-size': 6,
     'footer-right': "PDF制作：JTXIAO",
-    'footer-center': "[page]/[topage]",
+    'footer-center': "[page] / [topage]",
     'custom-header': [
         ('Accept-Encoding', 'gzip')
     ],
