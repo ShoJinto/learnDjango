@@ -180,7 +180,7 @@ def parserArticle(title, starturl, headers=headers):
 
         for i in range(4):
             brTag = soup.new_tag('br')
-            content.insert(0, brTag)
+            content.insert(9, brTag)
 
     except AttributeError as er:
         pass
