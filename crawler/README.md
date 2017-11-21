@@ -30,7 +30,7 @@ python crawler_v2.py
 其实在github上早有前人做过类似脚本，为什么还要发布这个脚本呢？个人认为他们做得不太精细，所以我自己就琢磨着写了这个脚本。
 具体详见效果图：
 
-![image](./crawler/pdfs/preview.png)
+![image](./pdfs/preview.png)
 
 #### 常见问题
 由于廖老师的网站对爬虫的识别率实在是太高，用requests或者python3k自带的url库会被中途refuse。所以采用了chrome --headless进行爬取，
