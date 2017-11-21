@@ -64,7 +64,7 @@ browser = webdriver.Chrome(chrome_options=chrome_options,
 
 def getCharpterUrl(url, headers=headers):
     '''
-
+    获取教程目录的url,并返回一个以章节名称为key对应url为value的字典
     '''
     urls = {}
     # html = client.get(url, headers=headers).text
@@ -97,6 +97,7 @@ def getCharpterUrl(url, headers=headers):
 
 def parserArticle(title, starturl, headers=headers):
     '''
+    解析html内容,并将内容作为结果返回
     '''
     url = starturl.split('!')[0]  # 获取每篇教程的真实url
     depth = starturl.split('!')[1]  # 获取该篇教程在整个教程中的目录层级
@@ -174,7 +175,7 @@ if __name__ == '__main__':
     articles = []
     html = 'pdfs/lxf_python3k.html'
     pdf = 'pdfs/lxf_python3k.pdf'
-    if os.path.exists('pdfs'):
+    if not os.path.exists('pdfs'):
         os.mkdir('pdfs')
     charpterurls = getCharpterUrl(startUrl)
     for title, url in bar(charpterurls.items()):
