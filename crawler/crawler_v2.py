@@ -27,7 +27,7 @@ pdfkit_options = {
     'margin-left': '0.75in',
     'encoding': "UTF-8",
     'header-line': '',
-    'hedaer-font-size': 6,
+    'header-font-size': 6,
     'header-right': "作者：廖雪峰",
     'footer-line': '',
     'footer-font-size': 6,
