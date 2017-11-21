@@ -1,0 +1,6 @@
+beautifulsoup4==4.6.0
+lxml==3.7.3
+pdfkit==0.6.1
+progressbar2==3.34.3
+requests==2.18.4
+selenium==3.6.0
