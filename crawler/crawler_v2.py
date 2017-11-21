@@ -157,20 +157,30 @@ def parserArticle(title, starturl, headers=headers):
             hTag['style'] = 'font-size:20px'
 
         '''
+        小标题前面添加4个br进行换行处理
         为每个章节添加一个居中显示的标题,使用h*标签的目的是让wkhtml2pdf能够生成清晰的树形目录结构.
         strong标签可以让每个章节的标题字体看起来一样大.
         通过观察目录的顶层depth值为0，下一级的depth值为1，再往下depth值增加1.因此可以使用
         `titleTagName = ''.join(['h',str(int(depth)+1)])`
         来构造h*标签
         '''
+        for i in range(8):
+            brTag = soup.new_tag('br')
+            content.insert(0, brTag)
+
         titleTagName = ''.join(['h', str(int(depth) + 1)])
         titleTag = soup.new_tag(titleTagName)
         titleTag['align'] = 'center'  # h1标签居中属性
-        content.insert(0, titleTag)  # 将h1标签插入整个内容的最前面
+        content.insert(8, titleTag)  # 将h1标签插入整个内容的最前面
+
         strongTag = soup.new_tag('strong')
         strongTag['style'] = 'font-size:30px'
         strongTag.string = title  # 教程的标题
         titleTag.insert(0, strongTag)
+
+        for i in range(4):
+            brTag = soup.new_tag('br')
+            content.insert(0, brTag)
 
     except AttributeError as er:
         pass
