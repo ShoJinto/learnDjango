@@ -1,23 +1,71 @@
 #!/usr/bin/env python
 #
 
-# import requests
+import requests
 import pdfkit
 from bs4 import BeautifulSoup
 import os
+# import time
 from selenium import webdriver
 
 import progressbar
 
-startUrl = r'https://www.liaoxuefeng.com/wiki/0014316089557264a6b348958f449949df42a6d3a2e542c000'
+# startUrl = r'https://www.liaoxuefeng.com/wiki/' \
+#            r'0014316089557264a6b348958f449949df42a6d3a2e542c000' # Python
+# startUrl = r'https://www.liaoxuefeng.com/wiki/0013739516305929606dd18361248578c67b8067c8c017b000' # Git
+startUrl = r'https://www.liaoxuefeng.com/wiki/001434446689867b27157e896e74d51a89c25cc8b43bdb3000'  # JavaScript
 rootUrl = r'https://www.liaoxuefeng.com'
+
+html_head = '''
+<head>    
+    <link rel="stylesheet" href="../img/css.css" />
+    
+    <!--[if lt IE 9]>
+    <link rel="stylesheet" href="/static/themes/default/css/ie.css?v=523c9a6" />
+    <![endif]-->
+       
+    <style id="x-doc-style">
+        .x-display-none { display: none; }
+
+        .x-display-if-not-signin { display: none; }
+    </style>
+	<style>
+	.x-wiki-visible {
+		display: block;
+	}
+	</style>
+	<style>
+	.x-center {
+		margin: 0;
+	}
+	.x-center {
+		margin-left: 316px;
+		padding-left: 15px;
+	}
+	</style>
+</head>
+'''
+
 headers = {
-    'User-Agent': r'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)'
-                  r'Chrome/45.0.2454.85 Safari/537.36 115Browser/6.0.3',
-    'Host': r'www.liaoxuefeng.com',
-    'Referer': startUrl,
+    'Accept': r'text/html,application/xhtml+xml,application/xml;'
+              r'q=0.9,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'zh-CN,zh;q=0.9',
     'Connection': 'keep-alive',
+    'Host': 'www.liaoxuefeng.com',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': r'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+                  r'AppleWebKit/537.36 (KHTML, like Gecko)'
+                  r'Chrome/62.0.3202.94 Safari/537.36'
 }
+
+# headers = {
+# 'User-Agent': r'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)'
+#   r'Chrome/45.0.2454.85 Safari/537.36 115Browser/6.0.3',
+# 'Host': r'www.liaoxuefeng.com',
+# 'Referer': startUrl,
+# 'Connection': 'keep-alive',
+# }
 
 pdfkit_options = {
     'page-size': 'Letter',
@@ -57,16 +105,17 @@ bar = progressbar.ProgressBar(
     ]
 )
 
-# browser = webdriver.PhantomJS(executable_path='F:\\jtxiao\\program\\phantomjs-2.1.1-windows\\bin\\phantomjs.exe')
+# browser = webdriver.PhantomJS(
+# executable_path='F:\\jtxiao\\program\\phantomjs-2.1.1-windows\\bin\\phantomjs.exe')
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--disable-gpu')
 
 browser = webdriver.Chrome(chrome_options=chrome_options,
-                           executable_path="F:\\jtxiao\\program\chromedriver.exe")
+                           executable_path="F:\\jtxiao\\program\\chromedriver.exe")
 
-# client = requests.Session()
+client = requests.Session()
 
 
 def getCharpterUrl(url, headers=headers):
@@ -98,8 +147,43 @@ def getCharpterUrl(url, headers=headers):
         title = item.find('a').get_text()
         url = rootUrl + item.find(name='a').attrs['href']
         urls[title] = '!'.join([url, depth])  # 将目录层级与url用‘!’作为分隔符一并返回以备后面使用
+        # time.sleep(0.1)
 
     return urls
+
+
+def getResource(imgurl, cssurl):
+    '''
+    获取图片文件的真是路径并经其下载到本地
+    方便解析html文件的时候引用
+    主要为了在使用e-book-covert生成电子书的时候能够正常显示图片
+    '''
+    headers = {
+        'accept': r'text/html,application/xhtml+xml,application/xml;q=0.9,'
+                  r'image/webp,image/apng,*/*;q=0.8',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'zh-CN,zh;q=0.9',
+        'user-agent': r'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+                      r'AppleWebKit/537.36 (KHTML, like Gecko)'
+                      r'Chrome/62.0.3202.94 Safari/537.36',
+    }
+    # get img resource
+    img = client.get(imgurl, headers=headers).content
+    if len(imgurl.split('/')[-1]) > 5:
+        imgName = ''.join(['img/', imgurl.split('/')[-1], '.jpg'])
+    else:
+        imgName = ''.join(['img/', imgurl.split('/')[-2], '.jpg'])
+    if not os.path.exists('img'):
+        os.makedirs('img')
+    with open(imgName, 'wb') as f:
+        f.write(img)
+
+    # get css resource
+    css = client.get(cssurl, headers=headers)
+    with open('css.css', 'wb') as f:
+        f.write(css)
+
+    return ''.join(['../', imgName])
 
 
 def parserArticle(title, starturl, headers=headers):
@@ -108,11 +192,10 @@ def parserArticle(title, starturl, headers=headers):
     '''
     url = starturl.split('!')[0]  # 获取每篇教程的真实url
     depth = starturl.split('!')[1]  # 获取该篇教程在整个教程中的目录层级
-    browser.get(url)
-    html = browser.page_source
-    # browser.close()
 
     try:
+        browser.get(url)
+        html = browser.page_source
         # html = client.get(url, headers=headers).text
         soup = BeautifulSoup(html, 'lxml')
         content = soup.find(
@@ -123,8 +206,14 @@ def parserArticle(title, starturl, headers=headers):
         经过分析src和data-src的属性值是相同。
         此处进行调整一遍pdf中能正常显示图片
         '''
-        for imgTag in soup.find_all(name='img', attrs={'src': 'https://cdn.webxueyuan.com/cdn/static/themes/default/img/loading.gif'}):
-            imgTag['src'] = imgTag['data-src']
+        # 为方便转换成功epub、mobi格式的电子书故将图片资源和css样式文件下载到本地，并修改标签属性
+        for imgTag in content.find_all(name='img'):
+            imgSrc = getResource(
+                imgurl=imgTag['data-src'],
+                cssurl=r'https://cdn.webxueyuan.com/cdn/static/themes/default/css/all.css?v=523c9a6'
+            )
+            imgTag['src'] = imgSrc
+        #     # imgTag['src'] = imgTag['data-src'] # 不考虑生成epub、mobi格式电子书不能正常显示图片的问题
 
         '''
         将vidoe标签更换成a标签，一遍在pdf中有更好的阅读体验。
@@ -190,26 +279,26 @@ def parserArticle(title, starturl, headers=headers):
 
 if __name__ == '__main__':
     articles = []
-    html = 'pdfs/lxf_python3k.html'
-    pdf = 'pdfs/lxf_python3k.pdf'
+    html = 'pdfs/lxf_javascript.html'
+    pdf = 'pdfs/lxf_javascript_tutorial.pdf'
     if not os.path.exists('pdfs'):
         os.mkdir('pdfs')
     charpterurls = getCharpterUrl(startUrl)
     for title, url in bar(charpterurls.items()):
         articles.append(parserArticle(title, url))
-        # time.sleep(1)
-    # articles.append(parserArticle('title', 'https://www.liaoxuefeng.com/wiki/0014316089557264a6b348958f449949df42a6d3a2e542c000/0014316090478912dab2a3a9e8f4ed49d28854b292f85bb000'))
+        # time.sleep(0.5)
+    # articles.append(parserArticle('title', 'https://www.liaoxuefeng.com/wiki/0014316089557264a6b348958f449949df42a6d3a2e542c000/001432339330096121ae7e38be44570b7fbd0d8faae26f6000!3'))
     browser.quit()
     print('get content done, will save to local storage')
 
     with open(html, mode='w+', encoding='utf-8') as f:
         for article in articles:
-            f.write(''.join(article))
+            f.write(''.join([html_head, article]))
     print('saved on local done, will covert to pdf file.')
 
     pdfkit.from_file(html, pdf, configuration=pdfkit_config,
                      options=pdfkit_options)
 
-    os.remove(html)  # 对生成的临时html进行清理
+    # os.remove(html)  # 对生成的临时html进行清理
 
     print('done')
