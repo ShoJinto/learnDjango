@@ -137,11 +137,11 @@ def checking(station, url, isretry=False):
         response = urllib2.urlopen(url)
         response_code[url] = response.getcode()
         if isretry:
+            reporter(station, "[%s]:%s" %
+                     (station, "is recovered!"), "check api", url)
             # 重新检测发现没有问题的车站将从redis移除
             redisClient().hdel("retrystation_list", station)
             redisClient().hdel("interval", station)
-            reporter(station, "[%s]:%s" %
-                     (station, "is recovered!"), "check api", url)
         else:
             logging.info("[%s]:%s is ok!" % (station, url))
     except HTTPError as err:
