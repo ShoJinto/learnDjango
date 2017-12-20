@@ -4,10 +4,7 @@
 import urllib2
 from urllib2 import HTTPError, URLError
 
-import time
-
-# from urllib2 import request
-# from urllib.error import HTTPError,URLError
+from datetime import datetime
 
 import smtplib
 from email.mime.text import MIMEText
@@ -73,16 +70,34 @@ def sendemail(submsg, frommsg, msg):
         logging.error("send warning message failed " + str(err))
 
 
-def reporter(sta_info, report, msg):
+def reporter(station, subject, reporter, msg):
     '''
     this is a sendmail call function
     sta_info    station information
     report      senduser
     msg         error message
     '''
-    logging.error(sta_info + ": " + msg)
-    sendemail(sta_info, report, sta_info + ": " + msg + "\nat: " +
-              time.strftime("%Y-%m-%d %H:%M:%S"))  # add timestemp
+    st_list = []
+    first_rep_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if len(redisClient().hgetall('interval')) > 0:
+        for st, timestr in redisClient().hgetall('interval').items():
+            st_list.append(st)
+            if station not in st_list:
+                redisClient().hset('interval', station, first_rep_time)
+            interval = (datetime.now() -
+                        datetime.strptime(timestr,
+                                          '%Y-%m-%d %H:%M:%S')).seconds / 60  # minutes
+            if interval > config.rate:
+                pass
+            else:
+                sendemail(subject, reporter, subject + "\nurl: " + msg + "\nat: " +
+                          first_rep_time)  # add timestemp
+                logging.error(subject + ": " + msg)
+    else:
+        redisClient().hset('interval', station, first_rep_time)
+        sendemail(subject, reporter, subject + "\nurl: " + msg + "\nat: " +
+                  first_rep_time)  # add timestemp
+        logging.error(subject + ": " + msg)
 
 
 def errorHandling(station, url, err):
@@ -102,10 +117,10 @@ def errorHandling(station, url, err):
             station)  # 获取redis中问题站点错误次数过期时间，用于刷新超时时间
         redisClient().set(station, int(er_count) + 1, ex=ttl)
 
-    if er_count >= config.count:
-        reporter("[%s]:%s" % (station, url), "check api", str(err))
+    if er_count > config.count:
+        reporter(station, "[%s]:%s" % (station, str(err)), "check api", url)
         redisClient().delete(station)  # 达到报警条件，发送完报警之后，需要对redis中的信息进行重置
-#         redisClient().rpush("retrystation_list",station)
+        # redisClient().rpush("retrystation_list",station)
         # 将需要重新检测的车站信息放入redis中
         redisClient().hset("retrystation_list", station, url)
 
@@ -122,16 +137,16 @@ def checking(station, url, isretry=False):
         response = urllib2.urlopen(url)
         response_code[url] = response.getcode()
         if isretry:
-            reporter("[%s]:%s" % (station, url), "check api", "is recovered!")
             # 重新检测发现没有问题的车站将从redis移除
             redisClient().hdel("retrystation_list", station)
+            redisClient().hdel("interval", station)
+            reporter(station, "[%s]:%s" %
+                     (station, "is recovered!"), "check api", url)
         else:
             logging.info("[%s]:%s is ok!" % (station, url))
     except HTTPError as err:
         errorHandling(station, url, err)
     except URLError as err:
-        errorHandling(station, url, err)
-    except Exception as err:
         errorHandling(station, url, err)
 
 

@@ -35,9 +35,11 @@ redis_host = "localhost"
 redis_port = "6379"
 
 # 报警规则设置参数
-# count 出现错误的次数，interval 错误次数在这个时间段内进行累加，参考设置的意思是：如果在300毫秒内错误次数超过3此就需要报警
-count = 3
+# count 出现错误的次数，interval 错误次数在这个时间段内进行累加，参考设置的意思是：如果在300秒内错误次数超过3此就需要报警
+# rate 控制报警邮件发送平率，以分钟为单位
+count = 0
 interval = 300
+rate = 1
 
 # 第三方SMTP服务
 mail_host = "smtp.mmyueche.com"
