@@ -123,7 +123,8 @@ def checking(station, url, isretry=False):
         response_code[url] = response.getcode()
         if isretry:
             reporter("[%s]:%s" % (station, url), "check api", "is recovered!")
-            redisClient().hdel("retrystation_list", station)  # 重新检测发现没有问题的车站将从redis移除
+            # 重新检测发现没有问题的车站将从redis移除
+            redisClient().hdel("retrystation_list", station)
         else:
             logging.info("[%s]:%s is ok!" % (station, url))
     except HTTPError as err:
@@ -138,20 +139,21 @@ def check_api():
     '''
     this is check api heath function
     '''
+    retry_list = redisClient().hgetall("retrystation_list").items()
     if config.useUrls is True:
         station = config.station_name
         for url in config.urls:
             checking(station, url)
 
         if redisClient().hlen("retrystation_list") > 0:
-            for re_station, re_url in redisClient().hgetall("retrystation_list").items():
+            for re_station, re_url in retry_list:
                 checking(re_station, re_url, isretry=True)
     else:
         for station, url in config.stationUrlMapping.items():
             checking(station, url)
 
         if redisClient().hlen("retrystation_list") > 0:
-            for re_station, re_url in redisClient().hgetall("retrystation_list").items():
+            for re_station, re_url in retry_list:
                 checking(re_station, re_url, isretry=True)
 
 
