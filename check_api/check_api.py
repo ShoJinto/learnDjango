@@ -38,7 +38,7 @@ def redisClient(host=config.redis_host, port=config.redis_port):
 
 # logger setting
 if path.exists(config.logpath) is not True:
-    makedirs(config.logpath, exist_ok=True)
+    makedirs(config.logpath)
 logger = logging.basicConfig(
     filename=config.logpath + "check_api.log",
     format="%(asctime)s -%(name)s-%(levelname)s-%(module)s:%(message)s",
@@ -93,12 +93,12 @@ def errorHandling(station, url, err):
     # 如果该站点是第一次被检测出有问题，说明redis中根本就没有该站点的任何信息，这个if not ... else 是对错误次数进行初始化
     if not redisClient().get(station):
         er_count = 0
-        redisClient(config.redis_host, config.redis_port).set(
+        redisClient().set(
             station, int(er_count) + 1, ex=config.interval)
     else:
         # 由于从redis中get到的value是str类型所以需要进行数据类型转换
         er_count = int(redisClient().get(station))
-        ttl = redisClient(config.redis_host, config.redis_port).ttl(
+        ttl = redisClient().ttl(
             station)  # 获取redis中问题站点错误次数过期时间，用于刷新超时时间
         redisClient().set(station, int(er_count) + 1, ex=ttl)
 
