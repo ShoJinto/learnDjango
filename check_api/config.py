@@ -9,7 +9,7 @@ useUrls = False
 station_name = "美美出行"
 
 # api接口url对应的车站
-statationUrlMapping = {
+stationUrlMapping= {
     #     "绵阳南湖":"http://2.100.100.14/czweb/StationService.asmx",
     #     "绵阳北川":"http://2.100.100.4/czweb/StationService.asmx",
     #     "绵阳富乐车站":"http://2.100.100.15/czweb/StationService.asmx",

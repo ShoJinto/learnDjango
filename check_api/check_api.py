@@ -37,8 +37,8 @@ def redisClient(host=config.redis_host, port=config.redis_port):
 
 
 # logger setting
-if path.exists(config.logpath) != True:
-    makedirs(config.logpath, existk=True)
+if path.exists(config.logpath) is not True:
+    makedirs(config.logpath, exist_ok=True)
 logger = logging.basicConfig(
     filename=config.logpath + "check_api.log",
     format="%(asctime)s -%(name)s-%(levelname)s-%(module)s:%(message)s",
@@ -87,7 +87,8 @@ def reporter(sta_info, report, msg):
 
 def errorHandling(station, url, err):
     '''
-    将经过检查有误的站点和错误次数作为reids的key和value进行存放，并设置key的超时时间。这样就达到了在规定时间内如果错误次数超过规定次数就进行报警的目的
+    将经过检查有误的站点和错误次数作为reids的key和value进行存放，并设置key的超时时间。
+    这样就达到了在规定时间内如果错误次数超过规定次数就进行报警的目的
     '''
     # 如果该站点是第一次被检测出有问题，说明redis中根本就没有该站点的任何信息，这个if not ... else 是对错误次数进行初始化
     if not redisClient().get(station):
@@ -105,7 +106,8 @@ def errorHandling(station, url, err):
         reporter("[%s]:%s" % (station, url), "check api", str(err))
         redisClient().delete(station)  # 达到报警条件，发送完报警之后，需要对redis中的信息进行重置
 #         redisClient().rpush("retrystation_list",station)
-        redisClient().hset("retrystation_list", station, url)  # 将需要重新检测的车站信息放入redis中
+        # 将需要重新检测的车站信息放入redis中
+        redisClient().hset("retrystation_list", station, url)
 
 
 def checking(station, url, isretry=False):
@@ -136,7 +138,7 @@ def check_api():
     '''
     this is check api heath function
     '''
-    if config.useUrls == True:
+    if config.useUrls is True:
         station = config.station_name
         for url in config.urls:
             checking(station, url)
