@@ -22,7 +22,7 @@ stationUrlMapping= {
     #     "遂宁蓬溪":"http://2.100.100.7/czweb/StationService.asmx",
     #     "遂宁安居":"http://2.100.100.13/czweb/StationService.asmx"
     "美美出行": "http://ms.mmchuxing.com/test/conn",
-    "百度": "http://www.baidu11111111.com",
+    "百度": "http://www.baidu.com",
     "新浪": "http://www.sina.com"
 }
 

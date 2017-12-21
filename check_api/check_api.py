@@ -70,37 +70,60 @@ def sendemail(submsg, frommsg, msg):
         logging.error("send warning message failed " + str(err))
 
 
-def reporter(station, subject, reporter, msg):
+def reporter(station, subject, reporter, msg, status_code=None):
     '''
     this is a sendmail call function
+    station     station name
     sta_info    station information
     report      senduser
     msg         error message
+    1. 将第一次发送报警邮件的时间写入redis，再次发送报警邮件的时候将会检查两个时间的差值，
+    如果超过config.rate这顶的分钟数就不进行报警邮件发送
+    2. 该站点报警邮件被忽略时，将会收到一封被忽略的邮件
     '''
-    st_list = []
-    first_rep_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if len(redisClient().hgetall('interval')) > 0:
-        for st, timestr in redisClient().hgetall('interval').items():
-            st_list.append(st)
-            if station not in st_list:
-                redisClient().hset('interval', station, first_rep_time)
+    rep_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if status_code is None:
+        status_code = 400
+    if status_code < 400:
+        sendemail(subject, reporter, subject + "\nurl: " + msg + "\nat: " +
+                  rep_time)  # add timestemp
+        logging.info(subject + ": " + msg)
+        return None
+
+    for st, opt in redisClient().hgetall('retry_list').items():
+        if st == station:
+            opt = eval(opt)  # str to dict using eval
+            try:
+                first_rep_time = opt['first_rep_time']
+            except KeyError:
+                opt['first_rep_time'] = rep_time
+                redisClient().hset('retry_list', station, opt)
+                first_rep_time = opt['first_rep_time']
+
             interval = (datetime.now() -
-                        datetime.strptime(timestr,
+                        datetime.strptime(first_rep_time,
                                           '%Y-%m-%d %H:%M:%S')).seconds / 60  # minutes
             if interval > config.rate:
-                pass
+                try:
+                    # 判断该站点是否发送过忽略报警邮件
+                    # 如果发生异常说明没有发送过忽略邮件
+                    # 发送过忽略报警邮件的站点将不发送被忽略邮件
+                    is_send_notify = opt['is_send_notify']
+                    if is_send_notify:
+                        pass
+                except KeyError:
+                    sendemail(subject, reporter,
+                              "%s\nurl:%s warnning more than %s hours was ignored\nat: %s"
+                              % (subject, msg, interval / 60, rep_time))
+                    opt['is_send_notify'] = True
+                    redisClient().hset('retry_list', station, opt)
             else:
                 sendemail(subject, reporter, subject + "\nurl: " + msg + "\nat: " +
-                          first_rep_time)  # add timestemp
+                          rep_time)  # add timestemp
                 logging.error(subject + ": " + msg)
-    else:
-        redisClient().hset('interval', station, first_rep_time)
-        sendemail(subject, reporter, subject + "\nurl: " + msg + "\nat: " +
-                  first_rep_time)  # add timestemp
-        logging.error(subject + ": " + msg)
 
 
-def errorHandling(station, url, err):
+def errorHandling(station, url, err, status_code=None):
     '''
     将经过检查有误的站点和错误次数作为reids的key和value进行存放，并设置key的超时时间。
     这样就达到了在规定时间内如果错误次数超过规定次数就进行报警的目的
@@ -118,11 +141,16 @@ def errorHandling(station, url, err):
         redisClient().set(station, int(er_count) + 1, ex=ttl)
 
     if er_count > config.count:
-        reporter(station, "[%s]:%s" % (station, str(err)), "check api", url)
-        redisClient().delete(station)  # 达到报警条件，发送完报警之后，需要对redis中的信息进行重置
-        # redisClient().rpush("retrystation_list",station)
         # 将需要重新检测的车站信息放入redis中
-        redisClient().hset("retrystation_list", station, url)
+        try:
+            # 检测重试列表中是否存在数据，如果产生异常说明列表中不存在该站点
+            redisClient().hgetall('retry_list')[station]
+            pass
+        except KeyError:
+            redisClient().hset("retry_list", station, {'url': url})
+        reporter(station, "[%s]:%s" % (station, str(err)),
+                 "check api", url, status_code)
+        redisClient().delete(station)  # 达到报警条件，发送完报警之后，需要对redis中的信息进行重置
 
 
 def checking(station, url, isretry=False):
@@ -132,16 +160,16 @@ def checking(station, url, isretry=False):
     station:    is station name
     url:          is station threeparty api url
     '''
-    response_code = dict()
     try:
         response = urllib2.urlopen(url)
-        response_code[url] = response.getcode()
+        status_code = response.getcode()
         if isretry:
-            # 重新检测发现没有问题的车站将从redis移除
-            redisClient().hdel("retrystation_list", station)
-            redisClient().hdel("interval", station)
+            # 发送故障恢复邮件
             reporter(station, "[%s]:%s" %
-                     (station, "is recovered!"), "check api", url)
+                     (station, "is recovered!"), "check api",
+                     url, status_code=status_code)
+            # 重新检测发现没有问题的车站将从redis移除,重置状态信息
+            redisClient().hdel("retry_list", station)
         else:
             logging.info("[%s]:%s is ok!" % (station, url))
     except HTTPError as err:
@@ -154,21 +182,23 @@ def check_api():
     '''
     this is check api heath function
     '''
-    retry_list = redisClient().hgetall("retrystation_list").items()
+    retry_list = redisClient().hgetall("retry_list").items()
     if config.useUrls is True:
         station = config.station_name
         for url in config.urls:
             checking(station, url)
 
-        if redisClient().hlen("retrystation_list") > 0:
-            for re_station, re_url in retry_list:
+        if redisClient().hlen("retry_list") > 0:
+            for re_station, opt in retry_list:
+                re_url = eval(opt)['url']
                 checking(re_station, re_url, isretry=True)
     else:
         for station, url in config.stationUrlMapping.items():
             checking(station, url)
 
-        if redisClient().hlen("retrystation_list") > 0:
-            for re_station, re_url in retry_list:
+        if redisClient().hlen("retry_list") > 0:
+            for re_station, opt in retry_list:
+                re_url = eval(opt)['url']
                 checking(re_station, re_url, isretry=True)
 
 
